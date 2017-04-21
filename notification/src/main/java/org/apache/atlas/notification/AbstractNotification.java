@@ -26,12 +26,14 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.ha.HAConfiguration;
+import org.apache.atlas.kafka.KafkaNotification;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.commons.configuration.Configuration;
 import org.codehaus.jettison.json.JSONArray;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -46,7 +48,7 @@ public abstract class AbstractNotification implements NotificationInterface {
      * The current expected version for notification messages.
      */
     public static final MessageVersion CURRENT_MESSAGE_VERSION = new MessageVersion("1.0.0");
-
+    public static final Logger LOG = LoggerFactory.getLogger(AbstractNotification.class);
     public static final String PROPERTY_EMBEDDED = PROPERTY_PREFIX + ".embedded";
     private final boolean embedded;
     private final boolean isHAEnabled;
@@ -81,6 +83,7 @@ public abstract class AbstractNotification implements NotificationInterface {
         for (int index = 0; index < messages.size(); index++) {
             strMessages[index] = getMessageJson(messages.get(index));
         }
+        LOG.info("VW: send: before sendInternal :"+Arrays.toString(strMessages));
         sendInternal(type, strMessages);
     }
 

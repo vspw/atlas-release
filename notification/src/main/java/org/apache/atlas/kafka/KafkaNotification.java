@@ -55,6 +55,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -173,7 +174,8 @@ public class KafkaNotification extends AbstractNotification implements Service {
     @VisibleForTesting
     public <T> List<NotificationConsumer<T>> createConsumers(NotificationType notificationType,
                                                       int numConsumers, boolean autoCommitEnabled) {
-        String topic = TOPIC_MAP.get(notificationType);
+        LOG.info("VW: Kafka Create Consumer");
+    	String topic = TOPIC_MAP.get(notificationType);
 
         Properties consumerProperties = getConsumerProperties(notificationType);
 
@@ -217,6 +219,7 @@ public class KafkaNotification extends AbstractNotification implements Service {
     @Override
     public void sendInternal(NotificationType type, String... messages) throws NotificationException {
         if (producer == null) {
+        	LOG.info("VW:sendInternal before createPRoducer "+Arrays.toString(messages));
             createProducer();
         }
         sendInternalToProducer(producer, type, messages);
@@ -226,9 +229,10 @@ public class KafkaNotification extends AbstractNotification implements Service {
     void sendInternalToProducer(Producer p, NotificationType type, String[] messages) throws NotificationException {
         String topic = TOPIC_MAP.get(type);
         List<MessageContext> messageContexts = new ArrayList<>();
+        LOG.info("VW: sendInternalToProducer ");
         for (String message : messages) {
             ProducerRecord record = new ProducerRecord(topic, message);
-            LOG.debug("Sending message for topic {}: {}", topic, message);
+            LOG.info("Sending message for topic {}: {}", topic, message);
             Future future = p.send(record);
             messageContexts.add(new MessageContext(future, message));
         }
@@ -238,7 +242,7 @@ public class KafkaNotification extends AbstractNotification implements Service {
         for (MessageContext context : messageContexts) {
             try {
                 RecordMetadata response = context.getFuture().get();
-                LOG.debug("Sent message for topic - {}, partition - {}, offset - {}", response.topic(),
+                LOG.info("Sent message for topic - {}, partition - {}, offset - {}", response.topic(),
                     response.partition(), response.offset());
             } catch (Exception e) {
                 lastFailureException = e;

@@ -152,7 +152,7 @@ public class HiveHook extends AtlasHook implements ExecuteWithHookContext {
 
         hiveConf = new HiveConf();
 
-        LOG.info("Created Atlas Hook");
+        LOG.info("VW: Created Atlas Hive Hook");
     }
 
     private static void setupOperationMap() {

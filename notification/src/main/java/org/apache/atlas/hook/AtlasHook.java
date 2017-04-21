@@ -88,8 +88,9 @@ public abstract class AtlasHook {
         notificationRetryInterval = atlasProperties.getInt(ATLAS_NOTIFICATION_RETRY_INTERVAL, 1000);
         Injector injector = Guice.createInjector(new NotificationModule());
         notifInterface = injector.getInstance(NotificationInterface.class);
-
+        
         LOG.info("Created Atlas Hook");
+        LOG.info("VW: notifyInterface: "+notifInterface.getClass().getName());
     }
 
     protected abstract String getNumberOfRetriesPropertyKey();
@@ -128,12 +129,15 @@ public abstract class AtlasHook {
         if (messages == null || messages.isEmpty()) {
             return;
         }
-
+        LOG.info("VW: notifyEntitiesInternal begin");
         final String message = messages.toString();
         int numRetries = 0;
         while (true) {
             try {
+            	LOG.info("~~~~~~~VW: MESSAGE:"+message);
+            	LOG.info("~~~~~~~VW: notifyEntitiesInternal: before notificationInterface.send~~~~~~~~");
                 notificationInterface.send(NotificationInterface.NotificationType.HOOK, messages);
+            	LOG.info("~~~~~~~VW: notifyEntitiesInternal: Done with  notificationInterface.send~~~~~~~~");
                 return;
             } catch (Exception e) {
                 numRetries++;

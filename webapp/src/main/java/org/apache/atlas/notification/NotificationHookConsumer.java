@@ -31,6 +31,7 @@ import org.apache.atlas.listener.ActiveStateChangeHandler;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.service.Service;
 import org.apache.commons.configuration.Configuration;
+import org.codehaus.jettison.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +71,12 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
     @Inject
     public NotificationHookConsumer(NotificationInterface notificationInterface, LocalAtlasClient atlasClient)
             throws AtlasException {
-        this.notificationInterface = notificationInterface;
+    	LOG.info("VW: NotificationHookConsumer notificationInterface:"+notificationInterface.getClass().getSimpleName());
+    	StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+    	for ( StackTraceElement stackTraceElement : stackTraceElements) {
+			LOG.info("VW: trace: "+stackTraceElement.toString());
+		}
+    	this.notificationInterface = notificationInterface;
         this.atlasClient = atlasClient;
         this.applicationProperties = ApplicationProperties.get();
 
@@ -100,6 +106,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
 
     private void startConsumers(ExecutorService executorService) {
         int numThreads = applicationProperties.getInt(CONSUMER_THREADS_PROPERTY, 1);
+        LOG.info("VW: NotificationHookConsumerConsumer:"+NotificationInterface.class.getName());
         List<NotificationConsumer<HookNotification.HookNotificationMessage>> notificationConsumers =
                 notificationInterface.createConsumers(NotificationInterface.NotificationType.HOOK, numThreads);
         if (executorService == null) {
@@ -109,6 +116,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
         executors = executorService;
         for (final NotificationConsumer<HookNotification.HookNotificationMessage> consumer : notificationConsumers) {
             HookConsumer hookConsumer = new HookConsumer(consumer);
+            LOG.info("VW: NotificationHookConsumer: consumer"+consumer.getClass().getSimpleName());
             consumers.add(hookConsumer);
             executors.submit(hookConsumer);
         }
@@ -218,6 +226,7 @@ public class NotificationHookConsumer implements Service, ActiveStateChangeHandl
                     case ENTITY_CREATE:
                         HookNotification.EntityCreateRequest createRequest =
                             (HookNotification.EntityCreateRequest) message;
+                        LOG.info("VW: NHC:handleMessage: createRequest.getEntities: "+createRequest.getEntities());
                         atlasClient.createEntity(createRequest.getEntities());
                         break;
 

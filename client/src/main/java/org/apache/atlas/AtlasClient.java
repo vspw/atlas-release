@@ -717,15 +717,21 @@ public class AtlasClient {
     }
 
     public List<String> createEntity(Collection<Referenceable> entities) throws AtlasServiceException {
-        JSONArray entityArray = getEntitiesArray(entities);
+        LOG.info("VW: Calling Atlas Client Create Entitiy, with entities:" +entities);
+    	JSONArray entityArray = getEntitiesArray(entities);
+        LOG.info("VW: End of getEntitiesArray");
         return createEntity(entityArray);
     }
 
     private JSONArray getEntitiesArray(Collection<Referenceable> entities) {
+    	LOG.info("VW: AtlasClient: getEntitiesArrya");
         JSONArray entityArray = new JSONArray(entities.size());
+        LOG.info("VW: AtlasClient: getEntitiesArryaafterSize");
         for (Referenceable entity : entities) {
+            LOG.info("VW: AtlasClient:entity:" + entities.toString());
             entityArray.put(InstanceSerialization.toJson(entity, true));
         }
+        LOG.info("VW: AtlasClient: entityArray: "+entityArray);
         return entityArray;
     }
 

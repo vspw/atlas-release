@@ -54,6 +54,7 @@ public class KafkaConsumer<T> extends AbstractNotificationConsumer<T> {
     public KafkaConsumer(MessageDeserializer<T> deserializer, KafkaStream<String, String> stream, int consumerId,
                          ConsumerConnector consumerConnector, boolean autoCommitEnabled) {
         super(deserializer);
+        LOG.info("VW:Starting KAfka Consumer");
         this.consumerConnector = consumerConnector;
         this.lastSeenOffset = 0;
         this.iterator   = stream.iterator();
