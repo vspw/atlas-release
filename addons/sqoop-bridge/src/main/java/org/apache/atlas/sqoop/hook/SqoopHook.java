@@ -40,6 +40,7 @@ import org.apache.atlas.notification.AbstractNotification.ReferenceableSerialize
 import org.apache.atlas.notification.hook.HookMessageDeserializer;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.notification.hook.HookNotification.EntityCreateRequest;
+import org.apache.atlas.notification.hook.HookNotification.HookNotificationMessage;
 import org.apache.atlas.sqoop.model.SqoopDataModelGenerator;
 import org.apache.atlas.sqoop.model.SqoopDataTypes;
 import org.apache.atlas.typesystem.IReferenceableInstance;
@@ -228,68 +229,77 @@ public class SqoopHook extends SqoopJobDataPublisher {
 		LOG.info("SqoopJobDataPublisher:hiveTableRef:"+hiveTableRef.toString());
 		LOG.info("SqoopJobDataPublisher:procRef:"+procRef.toString());
 
-//		LOG.info("#####Starting to publish via TestClient######");
-//		LOG.info("POST dbStoreREF");
-//		testClient(dbStoreRef.toString());
-//		LOG.info("POST dbRef");
-//		testClient(dbRef.toString());
-//		LOG.info("POST hiveTableRef");
-//		testClient(hiveTableRef.toString());
-//		LOG.info("POST procRef");
-//		testClient(procRef.toString());
-//		LOG.info("#####End publish via TestClient######");
+		//		LOG.info("#####Starting to publish via TestClient######");
+		//		LOG.info("POST dbStoreREF");
+		//		testClient(dbStoreRef.toString());
+		//		LOG.info("POST dbRef");
+		//		testClient(dbRef.toString());
+		//		LOG.info("POST hiveTableRef");
+		//		testClient(hiveTableRef.toString());
+		//		LOG.info("POST procRef");
+		//		testClient(procRef.toString());
+		//		LOG.info("#####End publish via TestClient######");
 
 		LOG.info("VW: Start to Notify Entities");
-		AtlasHook.notifyEntities(Arrays.asList(message), maxRetries);
+		//AtlasHook.notifyEntities(Arrays.asList(message), maxRetries);
 		LOG.info("VW: notifyEnties complete with message: "+message.toString());
 		
-		// get JSON and versioned messages array
-		LOG.info("#####Starting to publish via TestClient######");
-		String[] strMessages = new String[Arrays.asList(message).size()];
-		for (int index = 0; index < Arrays.asList(message).size(); index++) {
-			strMessages[index] = getMessageJson(Arrays.asList(message).get(index));
-			LOG.info("VW: SQOOP HOOK :"+strMessages[index]);
-		}
-		LOG.info("VW: END OF SQOOP HOOK :"+Arrays.toString(strMessages));
-		
-		//TODO check for server
-		
-		//send to server
-        for (String messageServe : strMessages) {
-        	testClient(messageServe);
-        	// on the server side. probably have similar behavior
-        	LOG.info("VW: Serverside messageServe:" +messageServe);
-            final MessageDeserializer<HookNotification.HookNotificationMessage> deserializer=new HookMessageDeserializer();
-            HookNotification.HookNotificationMessage msg=deserializer.deserialize(messageServe);
-            LOG.info("Deserilizer clasS: "+deserializer.getClass().getName());
-            LOG.info("VW: Serverside msg deserialized:" +msg);
-            LOG.info("VW: after deserializer:" +msg.getType().toString());
-            HookNotification.EntityCreateRequest createRequest =
-                    (HookNotification.EntityCreateRequest) msg;
-            LOG.info("VW: createRequest: "+createRequest.toString());
-            
-            Configuration atlasConf = ApplicationProperties.get();
-            String ATLAS_ENDPOINT = "atlas.rest.address";
-            String[] atlasEndpoint = atlasConf.getStringArray(ATLAS_ENDPOINT);
-            String DEFAULT_DGI_URL = "http://localhost:21000/";
-            if (atlasEndpoint == null || atlasEndpoint.length == 0){
-                atlasEndpoint = new String[] { DEFAULT_DGI_URL };
-            }
-            AtlasClient atlasClient;
+		publishToJetty(message);
 
-            if (!AuthenticationUtil.isKerberosAuthenticationEnabled()) {
-                String[] basicAuthUsernamePassword = AuthenticationUtil.getBasicAuthenticationInput();
-                atlasClient = new AtlasClient(atlasEndpoint, basicAuthUsernamePassword);
-            } else {
-                UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-                atlasClient = new AtlasClient(ugi, ugi.getShortUserName(), atlasEndpoint);
-            }
-            LOG.info("VW: CREATING Entity from Atlas Client:");
-            LOG.info("VW: createRequestGetEntities: "+createRequest.getEntities());
-            //JSONArray entityArray = new JSONArray(createRequest.getEntities().size());
-            atlasClient.createEntity(createRequest.getEntities());
-        }
-        LOG.info("#####End publish via TestClient######");
+	}
+
+	public void publishToJetty(HookNotificationMessage message) throws Exception {
+
+		LOG.info("##### HWX:publishToJetty: Starting to publishTOJetty ######");
+		LOG.info("HWX:publishToJetty: GET JSON AND VERSIONED MESSAGE");
+		String[] strArrayJsonMessages = new String[Arrays.asList(message).size()];
+		for (int index = 0; index < Arrays.asList(message).size(); index++) {
+			strArrayJsonMessages[index] = getMessageJson(Arrays.asList(message).get(index));
+			LOG.debug("~~HWX:publishToJetty:jsonMessage: "+strArrayJsonMessages[index]);
+		}
+
+		//TODO check for server
+
+		LOG.info("HWX:publishToJetty:Sending Each Message in Array to JettyServer");
+		for (String strJsonMessage : strArrayJsonMessages) 
+		{
+			testClient(strJsonMessage);
+/*			// on the server side. probably have similar behavior
+			LOG.info("VW: Serverside messageServe:" +strJsonMessage);
+			LOG.info("HWX:ServerSide: Deserializing received message");
+			final MessageDeserializer<HookNotification.HookNotificationMessage> deserializer=new HookMessageDeserializer();
+			HookNotification.HookNotificationMessage des_hookNotifMsg=deserializer.deserialize(strJsonMessage);
+			LOG.debug("HWX:ServerSide: Deserilizer class: "+deserializer.getClass().getName());
+			LOG.debug("HWX:ServerSide: deserialized msg type: {} \n and msg: {}" +des_hookNotifMsg.getType().toString(), des_hookNotifMsg);
+
+			LOG.info("HWX:ServerSide: Casting HookNotificationMessage into EntityCreateRequest");
+			HookNotification.EntityCreateRequest objEntityCreateRequest =
+					(HookNotification.EntityCreateRequest) des_hookNotifMsg;
+			LOG.debug("HWX:ServerSide: EntityCreateRequest: "+objEntityCreateRequest.toString());
+
+			LOG.debug("HWX:ServerSide: Creating Atlas Client to POST requests ");
+			Configuration atlasConf = ApplicationProperties.get();
+			String ATLAS_ENDPOINT = "atlas.rest.address";
+			String[] atlasEndpoint = atlasConf.getStringArray(ATLAS_ENDPOINT);
+			String DEFAULT_DGI_URL = "http://localhost:21000/";
+			if (atlasEndpoint == null || atlasEndpoint.length == 0){
+				atlasEndpoint = new String[] { DEFAULT_DGI_URL };
+			}
+			AtlasClient atlasClient;
+
+			if (!AuthenticationUtil.isKerberosAuthenticationEnabled()) {
+				//String[] basicAuthUsernamePassword = AuthenticationUtil.getBasicAuthenticationInput();
+				atlasClient = new AtlasClient(atlasEndpoint, new String[]{"admin", "admin"});
+			} else {
+				UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+				atlasClient = new AtlasClient(ugi, ugi.getShortUserName(), atlasEndpoint);
+			}
+			LOG.info("HWX:ServerSide: Creating Entity using Atlas Client");
+			LOG.debug("HWX:ServerSide: createRequestGetEntities: "+objEntityCreateRequest.getEntities());
+			//JSONArray entityArray = new JSONArray(createRequest.getEntities().size());
+			atlasClient.createEntity(objEntityCreateRequest.getEntities());*/
+		}
+		LOG.info("##### HWX:publishToJetty: End publishTOJetty ######");
 
 	}
 
@@ -385,66 +395,66 @@ public class SqoopHook extends SqoopJobDataPublisher {
 
 		return GSON.toJson(versionedMessage);
 	}
-    @VisibleForTesting
-    void handleMessage(HookNotification.HookNotificationMessage message) throws
-        AtlasServiceException, AtlasException {
-    	//build atlas Client
-        AtlasClient atlasClient=null;
-        for (int numRetries = 0; numRetries < 5; numRetries++) {
-            LOG.debug("Running attempt {}", numRetries);
-            try {
-                //atlasClient.setUser(message.getUser());
-                switch (message.getType()) {
-                case ENTITY_CREATE:
-                    HookNotification.EntityCreateRequest createRequest =
-                        (HookNotification.EntityCreateRequest) message;
-                    atlasClient.createEntity(createRequest.getEntities());
-                    break;
+	@VisibleForTesting
+	void handleMessage(HookNotification.HookNotificationMessage message) throws
+	AtlasServiceException, AtlasException {
+		//build atlas Client
+		AtlasClient atlasClient=null;
+		for (int numRetries = 0; numRetries < 5; numRetries++) {
+			LOG.debug("Running attempt {}", numRetries);
+			try {
+				//atlasClient.setUser(message.getUser());
+				switch (message.getType()) {
+				case ENTITY_CREATE:
+					HookNotification.EntityCreateRequest createRequest =
+					(HookNotification.EntityCreateRequest) message;
+					atlasClient.createEntity(createRequest.getEntities());
+					break;
 
-                case ENTITY_PARTIAL_UPDATE:
-                    HookNotification.EntityPartialUpdateRequest partialUpdateRequest =
-                        (HookNotification.EntityPartialUpdateRequest) message;
-                    atlasClient.updateEntity(partialUpdateRequest.getTypeName(),
-                        partialUpdateRequest.getAttribute(),
-                        partialUpdateRequest.getAttributeValue(), partialUpdateRequest.getEntity());
-                    break;
+				case ENTITY_PARTIAL_UPDATE:
+					HookNotification.EntityPartialUpdateRequest partialUpdateRequest =
+					(HookNotification.EntityPartialUpdateRequest) message;
+					atlasClient.updateEntity(partialUpdateRequest.getTypeName(),
+							partialUpdateRequest.getAttribute(),
+							partialUpdateRequest.getAttributeValue(), partialUpdateRequest.getEntity());
+					break;
 
-                case ENTITY_DELETE:
-                    HookNotification.EntityDeleteRequest deleteRequest =
-                        (HookNotification.EntityDeleteRequest) message;
-                    atlasClient.deleteEntity(deleteRequest.getTypeName(),
-                        deleteRequest.getAttribute(),
-                        deleteRequest.getAttributeValue());
-                    break;
+				case ENTITY_DELETE:
+					HookNotification.EntityDeleteRequest deleteRequest =
+					(HookNotification.EntityDeleteRequest) message;
+					atlasClient.deleteEntity(deleteRequest.getTypeName(),
+							deleteRequest.getAttribute(),
+							deleteRequest.getAttributeValue());
+					break;
 
-                case ENTITY_FULL_UPDATE:
-                    HookNotification.EntityUpdateRequest updateRequest =
-                        (HookNotification.EntityUpdateRequest) message;
-                    atlasClient.updateEntities(updateRequest.getEntities());
-                    break;
+				case ENTITY_FULL_UPDATE:
+					HookNotification.EntityUpdateRequest updateRequest =
+					(HookNotification.EntityUpdateRequest) message;
+					atlasClient.updateEntities(updateRequest.getEntities());
+					break;
 
-                default:
-                    throw new IllegalStateException("Unhandled exception!");
-                }
+				default:
+					throw new IllegalStateException("Unhandled exception!");
+				}
 
-                break;
-            } catch (Throwable e) {
-                LOG.warn("Error handling message" + e.getMessage());
-                try{
-                    LOG.info("Sleeping for {} ms before retry", 10);
-                    Thread.sleep(10);
-                }catch (InterruptedException ie){
-                    LOG.error("Notification consumer thread sleep interrupted");
-                }
+				break;
+			} catch (Throwable e) {
+				LOG.warn("Error handling message" + e.getMessage());
+				try{
+					LOG.info("Sleeping for {} ms before retry", 10);
+					Thread.sleep(10);
+				}catch (InterruptedException ie){
+					LOG.error("Notification consumer thread sleep interrupted");
+				}
 
-                if (numRetries == (5 - 1)) {
-                    LOG.warn("Max retries exceeded for message {}", message, e);
+				if (numRetries == (5 - 1)) {
+					LOG.warn("Max retries exceeded for message {}", message, e);
 
-                    return;
-                }
-            }
-        }
-        //commit();
-    }
+					return;
+				}
+			}
+		}
+		//commit();
+	}
 
 }
